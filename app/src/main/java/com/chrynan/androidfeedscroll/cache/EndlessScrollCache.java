@@ -9,6 +9,7 @@ import android.os.AsyncTask;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -148,6 +149,7 @@ public class EndlessScrollCache {
                         e.printStackTrace();
                     }
                 }
+                c.close();
                 db.close();
                 return items;
             }
@@ -156,6 +158,13 @@ public class EndlessScrollCache {
                 listener.onRead(items);
             }
         }.execute();
+    }
+
+    public boolean exists(){
+        //Database should exist if we hold a reference to mDbHelper but just in case a simple method
+        //that checks if the database file exists
+        File dbFile = context.getDatabasePath(mDbHelper.getDatabaseName());
+        return dbFile.exists();
     }
 
     public interface OnReadCacheListener{

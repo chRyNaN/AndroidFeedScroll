@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -39,6 +40,7 @@ public abstract class HttpTask extends AsyncTask<String, Void, String> {
         try{
             return downloadUrl(url, type, p);
         }catch(IOException e){
+            e.printStackTrace();
             return null;
         }
     }
@@ -94,6 +96,7 @@ public abstract class HttpTask extends AsyncTask<String, Void, String> {
     // the web page content as a InputStream, which it returns as
     // a string.
     private String downloadUrl(String myurl, String type, String params) throws IOException {
+        Log.d("App", "downloadUrl() method");
         InputStream is = null;
         try {
             URL url;
@@ -131,6 +134,7 @@ public abstract class HttpTask extends AsyncTask<String, Void, String> {
 
     // Reads an InputStream and converts it to a String.
     public String readIt(InputStream stream, int responseCode) throws IOException, UnsupportedEncodingException {
+        Log.d("App", "readIt() method");
         BufferedReader br = null;
         StringBuilder sb = new StringBuilder();
 
@@ -141,6 +145,7 @@ public abstract class HttpTask extends AsyncTask<String, Void, String> {
                 sb.append(line);
             }
         } catch (IOException e) {
+            e.printStackTrace();
         } finally {
             if (br != null) {
                 try {
@@ -157,6 +162,7 @@ public abstract class HttpTask extends AsyncTask<String, Void, String> {
         }catch(JSONException jex){
             jex.printStackTrace();
         }
+        Log.d("App", "readIt method: obj.toString() = " + obj.toString());
         return obj.toString();
     }
 
