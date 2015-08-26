@@ -29,6 +29,7 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
     private int defaultRetrieveAmount = 5;
     private RecyclerView recyclerView;
     EndlessRecyclerOnScrollListener scrollListener;
+    private static final int DEFAULT_VIEW_TYPE = 435;
 
     private Context context;
     //Application user credentials
@@ -84,6 +85,10 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
 
     public JSONObject getItem(int position){
         return this.items.get(position);
+    }
+
+    public List<JSONObject> getItems(){
+        return this.items;
     }
 
     /** Adding and Removing items in the list **/
