@@ -28,14 +28,16 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
     private String objectIdField;
     private int defaultRetrieveAmount = 5;
     private RecyclerView recyclerView;
-    EndlessRecyclerOnScrollListener scrollListener;
+    private EndlessRecyclerOnScrollListener scrollListener;
     public static final int DEFAULT_VIEW_TYPE = 435;
+    private String defaultString;
 
     private Context context;
     //Application user credentials
     private String userId;
     private String token;
     private List<JSONObject> items; //The actual items loaded to be displayed
+    private List<JSONObject> loadedItems; //items that were loaded; this allows you to display items that aren't considered when loading more
     private EndlessScrollCache cache;
 
     public EndlessScrollAdapter(Context context, String userId, String token){
@@ -43,6 +45,7 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
         this.userId = userId;
         this.token = token;
         this.items = new ArrayList<>();
+        this.loadedItems = new ArrayList<>();
         this.cache = new EndlessScrollCache(context);
     }
 
@@ -51,6 +54,7 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
         this.userId = userId;
         this.token = token;
         this.items = items;
+        this.loadedItems = new ArrayList<>();
         this.cache = new EndlessScrollCache(context);
     }
 
@@ -107,7 +111,27 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
         notifyDataSetChanged();
     }
 
+    protected void addLoadedToTop(List<JSONObject> list){
+        List<JSONObject> newList = new ArrayList<>();
+        newList.addAll(list);
+        newList.addAll(this.items);
+        this.items = newList;
+        newList = new ArrayList<>();
+        newList.addAll(list);
+        newList.addAll(this.loadedItems);
+        this.loadedItems = newList;
+        notifyDataSetChanged();
+    }
+
     public void addToBottom(JSONObject obj){
+        this.items.add(obj);
+    }
+
+    public void addToBottom(List<JSONObject> list){
+        this.items.addAll(list);
+    }
+
+    protected boolean addLoadedToBottom(JSONObject obj){
         boolean add = true;
         for(JSONObject o : this.items){
             if(getObjectId(o).equals(getObjectId(obj))){
@@ -117,46 +141,49 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
         }
         if(add) {
             this.items.add(obj);
+            this.loadedItems.add(obj);
             //this.cache.save(obj);
             notifyDataSetChanged();
         }
+        return add;
     }
 
-    public void addToBottom(List<JSONObject> items){
+    protected boolean addLoadedToBottom(List<JSONObject> items){
         boolean add = false;
         if(items.size() > this.items.size()) {
             add = true;
         }else {
             String comp1 = getObjectId(items.get(0));
-            Log.d("APP", "this.items.size() = " + this.items.size() + " items.size() = " + items.size() + " " +
-                    "this.items.size() - (items.size() + 1) = " + (this.items.size() - (items.size() + 1)));
-            String comp2 = getObjectId(this.items.get(this.items.size() - (items.size() + 1)));
+            String comp2 = getObjectId(this.loadedItems.get(this.loadedItems.size() - (items.size() + 1)));
             if (comp1.equals(comp2)) {
                 add = false;
             }else{
                 add = true;
             }
         }
-        Log.d("App", "ADDTOBOTTOM = " + add);
         if(add) {
             this.items.addAll(items);
+            this.loadedItems.addAll(items);
             //this.cache.save(items);
             notifyDataSetChanged();
         }
+        return add;
     }
 
     public void remove(JSONObject obj){
         this.items.remove(obj);
+        this.loadedItems.remove(obj);
     }
 
     public void clear(){
         this.items.clear();
+        this.loadedItems.clear();
     }
     /** End of adding and removing items **/
 
 
     public void loadMoreTop(final OnLoadListener listener){
-        final String id = (this.items == null || this.items.size() < 1) ? "0" : getObjectId(this.items.get(0));
+        final String id = (this.loadedItems == null || this.loadedItems.size() < 1) ? "-1" : getObjectId(this.loadedItems.get(0));
 
         //the task to load data from the server
         final HttpTask t = new HttpTask() {
@@ -165,7 +192,6 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
                 //result = {response: [], responseCode}
                 //the actual response should be in the form of an array of JSONObjects
                 try{
-                    Log.d("APP", "RESULT = " + result);
                     JSONObject obj = new JSONObject(result);
                     JSONArray array = new JSONArray(obj.getString("response"));
                     List<JSONObject> list = new ArrayList<>();
@@ -175,6 +201,7 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
                     //to avoid duplicate objects, for now we'll do a clean save and rewrite the items in the list
                     //should add better functionality later
                     items = list;
+                    loadedItems = list;
                     if(scrollListener != null){
                         scrollListener.restart();
                     }
@@ -184,6 +211,7 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
                 }catch(Exception e){
                     e.printStackTrace();
                 }
+                onAfterLoad();
             }
         };
         //first check the cache for items to display while we load items from the server
@@ -203,8 +231,7 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
     }
 
     public void loadMoreBottom(final OnLoadListener listener){
-        Log.d("APP", "loadMoreBottom");
-        final String id = getObjectId(items.get(items.size() - 1));
+        final String id = getObjectId(loadedItems.get(loadedItems.size() - 1));
         //the task to load data from the server
         final HttpTask t = new HttpTask() {
             @Override
@@ -218,11 +245,12 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
                     for(int i = 0; i < array.length(); i++){
                         list.add(array.getJSONObject(i));
                     }
-                    addToBottom(list);
+                    addLoadedToBottom(list);
                     listener.onLoad(list);
                 }catch(Exception e){
                     e.printStackTrace();
                 }
+                onAfterLoad();
             }
         };
         //first check the cache for items to display while we load items from the server
@@ -239,6 +267,8 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
             t.execute(loadBottomRestURL + userId + "/" + token + "/" + id + "/" + defaultRetrieveAmount);
         }
     }
+
+    public void onAfterLoad(){}
 
     public String getObjectId(JSONObject obj){
         if (this.items != null && this.items.size() >= 1) {
@@ -289,6 +319,14 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
         this.defaultRetrieveAmount = defaultRetrieveAmount;
     }
 
+    public String getDefaultString() {
+        return defaultString;
+    }
+
+    public void setDefaultString(String defaultString) {
+        this.defaultString = defaultString;
+    }
+
 
     public static class ViewHolder extends RecyclerView.ViewHolder{
         public ViewHolder(View v){
@@ -334,19 +372,13 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
             visibleItemCount = view.getChildCount();
             totalItemCount = mLinearLayoutManager.getItemCount();
             firstVisibleItem = mLinearLayoutManager.findFirstVisibleItemPosition();
-            Log.d("onScrolled", "totalItemCount = " + totalItemCount + " visibleItemCount = " + visibleItemCount +
-                    " firstVisibleItem = " + firstVisibleItem + " visibleThreshold = " + visibleThreshold + " previousTotal = " + previousTotal);
-            Log.d("onScrolled", "LOADING = " + loading);
             if (loading) {
                 if (totalItemCount > previousTotal) {
                     loading = false;
                     previousTotal = totalItemCount;
                 }
             }
-            Log.d("onScrolled", "(totalItemCount - visibileItemCount) = " + (totalItemCount - visibleItemCount) +
-                    " firstVisibileItem + visiblieThreshold = " + (firstVisibleItem + visibleThreshold));
             if (!loading && (totalItemCount - visibleItemCount) <= (firstVisibleItem + visibleThreshold)) {
-                Log.d("onScrolled", "load more");
                 // End has been reached
                 // Do something
                 ((EndlessScrollAdapter) view.getAdapter()).loadMoreBottom(new OnLoadListener() {
