@@ -29,7 +29,7 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
     private int defaultRetrieveAmount = 5;
     private RecyclerView recyclerView;
     EndlessRecyclerOnScrollListener scrollListener;
-    private static final int DEFAULT_VIEW_TYPE = 435;
+    public static final int DEFAULT_VIEW_TYPE = 435;
 
     private Context context;
     //Application user credentials
