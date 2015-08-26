@@ -194,11 +194,11 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
                     items = results;
                     notifyDataSetChanged();
                     listener.onCacheLoad(results);*/
-                    t.execute(loadTopRestURL + userId + "/" + token + "/" + id + "/-1");
+                    t.execute(loadTopRestURL + userId + "/" + token + "/" + id);
                 //}
             //});
         }else{
-            t.execute(loadTopRestURL + userId + "/" + token + "/" + id + "/-1");
+            t.execute(loadTopRestURL + userId + "/" + token + "/" + id);
         }
     }
 
