@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">AndroidFeedScroll</string>
+    <string name="title_activity_home">Feed</string>
+    <string name="google_api_developer_key"></string>
+    <string name="recommended">Recommended</string>
+</resources>

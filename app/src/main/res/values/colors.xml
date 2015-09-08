@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="primary" type="color">#34495e</item>
+    <item name="primaryDark" type="color">#2c3e50</item>
+    <item name="accent" type="color">#1abc9c</item>
+    <item name="textPrimary" type="color">#FFFFFF</item>
+    <item name="backgroundColor" type="color">#ECF0F1</item>
+    <item name="white" type="color">#FFFFFF</item>
+    <item name="black" type="color">#000000</item>
+    <item name="midnightBlue" type="color">#2c3e50</item>
+    <item name="wetAsphalt" type="color">#34495e</item>
+    <item name="turquoise" type="color">#1abc9c</item>
+    <item name="greenSea" type="color">#16a085</item>
+    <item name="emerald" type="color">#2ecc71</item>
+    <item name="nephritis" type="color">#27ae60</item>
+    <item name="peterRiver" type="color">#3498db</item>
+    <item name="belizeHole" type="color">#2980b9</item>
+    <item name="amethyst" type="color">#9b59b6</item>
+    <item name="wisteria" type="color">#8e44ad</item>
+    <item name="sunFlower" type="color">#f1c40f</item>
+    <item name="orange" type="color">#f39c12</item>
+    <item name="carrot" type="color">#e67e22</item>
+    <item name="pumpkin" type="color">#d35400</item>
+    <item name="alizarin" type="color">#e74c3c</item>
+    <item name="pomegranate" type="color">#c0392b</item>
+    <item name="clouds" type="color">#ecf0f1</item>
+    <item name="silver" type="color">#bdc3c7</item>
+    <item name="concrete" type="color">#95a5a6</item>
+    <item name="asbestos" type="color">#7f8c8d</item>
+    <item name="pressed_list_item" type="color">#bdc3c7</item>
+    <item name="youtube_play_icon" type="color">#60FFFFFF</item>
+
+</resources>

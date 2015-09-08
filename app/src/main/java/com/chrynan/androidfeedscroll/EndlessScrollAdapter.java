@@ -1,9 +1,9 @@
 package com.chrynan.androidfeedscroll;
 
+import android.app.Activity;
 import android.content.Context;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -15,9 +15,10 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 /**
- * Created by chrynan on 8/22/2015. TODO better use generics
+ * Created by chrynan on 8/22/2015. TODO better use generics and enable cache
  */
 public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdapter.ViewHolder> {
     //Base URL for loading the items, ex: https://example.com/rs/feed/getFeed/
@@ -40,6 +41,8 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
     private List<JSONObject> loadedItems; //items that were loaded; this allows you to display items that aren't considered when loading more
     private EndlessScrollCache cache;
 
+    private Random random;
+
     public EndlessScrollAdapter(Context context, String userId, String token){
         this.context = context;
         this.userId = userId;
@@ -47,6 +50,7 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
         this.items = new ArrayList<>();
         this.loadedItems = new ArrayList<>();
         this.cache = new EndlessScrollCache(context);
+        random = new Random();
     }
 
     public EndlessScrollAdapter(Context context, List<JSONObject> items, String userId, String token){
@@ -56,6 +60,7 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
         this.items = items;
         this.loadedItems = new ArrayList<>();
         this.cache = new EndlessScrollCache(context);
+        random = new Random();
     }
 
     public void init(){
@@ -108,7 +113,7 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
         newList.addAll(this.items);
         this.items = newList;
         //this.cache.cleanSave(this.items);
-        notifyDataSetChanged();
+        dataChanged();
     }
 
     protected void addLoadedToTop(List<JSONObject> list){
@@ -120,15 +125,99 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
         newList.addAll(list);
         newList.addAll(this.loadedItems);
         this.loadedItems = newList;
-        notifyDataSetChanged();
+        dataChanged();
     }
 
     public void addToBottom(JSONObject obj){
         this.items.add(obj);
+        dataChanged();
     }
 
     public void addToBottom(List<JSONObject> list){
         this.items.addAll(list);
+        dataChanged();
+    }
+
+    public int addToRandomPosition(JSONObject obj, int startPosition){
+        int size = this.items.size();
+        startPosition = (startPosition < 0) ? 0 : startPosition;
+        startPosition = (startPosition >= size) ? size - 1 : startPosition;
+        int position = startPosition;
+        if(size < 1){
+            position = 0;
+            addToBottom(obj);
+        }else{
+            position = random.nextInt(size - startPosition) + startPosition;
+            List<JSONObject> before = subList(this.items, 0, position + 1);
+            List<JSONObject> after = null;
+            if(position != size - 1){
+                after = subList(this.items, position + 1, size);
+            }
+            this.items.clear();
+            if(position != 0){
+                this.items.addAll(before);
+                this.items.add(obj);
+            }else{
+                this.items.add(obj);
+                this.items.addAll(before);
+            }
+            if(after != null){
+                this.items.addAll(after);
+            }
+        }
+        dataChanged();
+        return position;
+    }
+
+    public int addToRandomPosition(JSONObject obj){
+        int size = this.items.size();
+        int position = 0;
+        if(size < 1){
+            addToBottom(obj);
+        }else{
+            random = new Random();
+            position = random.nextInt(size);
+            List<JSONObject> before = subList(this.items, 0, position + 1);
+            List<JSONObject> after = null;
+            if(position != size - 1){
+                after = subList(this.items, position + 1, size);
+            }
+            this.items.clear();
+            if(position != 0) {
+                this.items.addAll(before);
+                this.items.add(obj);
+            }else {
+                this.items.add(obj);
+                this.items.addAll(before);
+            }
+            if(after != null){
+                this.items.addAll(after);
+            }
+        }
+        dataChanged();
+        return position;
+    }
+
+    private List<JSONObject> subList(List<JSONObject> list, int startIndex, int endIndexPlusOne){
+        //The reason for creating a custom method for doing this instead of using ArrayList's subList() method is because
+        //ArrayList's subList() method returns a List where alterations are reflected by the parent list and vice versa
+        //making it difficult to perform the task I need. startIndex is inclusive; default is 0. endIndexPlusOne is exclusive.
+        if(list == null || list.size() < 1){
+            return null;
+        }
+        startIndex = (startIndex < 0) ? 0 : startIndex;
+        startIndex = (startIndex > list.size() - 1) ? list.size() - 1 : startIndex;
+        endIndexPlusOne = (endIndexPlusOne > list.size()) ? list.size() : endIndexPlusOne;
+        endIndexPlusOne = (endIndexPlusOne < 1) ? 1 : endIndexPlusOne;
+        List<JSONObject> result = new ArrayList<>();
+        if(endIndexPlusOne <= startIndex){
+            result.add(list.get(startIndex));
+            return result;
+        }
+        for(int i = startIndex; i < endIndexPlusOne; i++){
+            result.add(list.get(i));
+        }
+        return result;
     }
 
     protected boolean addLoadedToBottom(JSONObject obj){
@@ -143,7 +232,7 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
             this.items.add(obj);
             this.loadedItems.add(obj);
             //this.cache.save(obj);
-            notifyDataSetChanged();
+            dataChanged();
         }
         return add;
     }
@@ -165,7 +254,7 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
             this.items.addAll(items);
             this.loadedItems.addAll(items);
             //this.cache.save(items);
-            notifyDataSetChanged();
+            dataChanged();
         }
         return add;
     }
@@ -173,14 +262,41 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
     public void remove(JSONObject obj){
         this.items.remove(obj);
         this.loadedItems.remove(obj);
+        dataChanged();
     }
 
     public void clear(){
         this.items.clear();
         this.loadedItems.clear();
+        dataChanged();
+    }
+
+    protected void dataChanged(){
+        //this method will handle notifying that the data set has changed even if not called from the UI thread, as long as,
+        //the context used when instantiating this class is an instance of Activity
+        try {
+            if(context instanceof Activity) {
+                ((Activity) context).runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyDataSetChanged();
+                    }
+                });
+            } else {
+                //try to call notifyDataSetChanged() on current thread, but it might throw an exception if it's not on the UI thread
+                notifyDataSetChanged();
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
     }
     /** End of adding and removing items **/
 
+
+    public void dismount(){
+        //This method is called from the parent Activity or Fragment when it's onStop() or onDestroy() methods are called.
+        //It's used for any clean ups that need to be done in the adapter.
+    }
 
     public void loadMoreTop(final OnLoadListener listener){
         final String id = (this.loadedItems == null || this.loadedItems.size() < 1) ? "-1" : getObjectId(this.loadedItems.get(0));
@@ -192,24 +308,31 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
                 //result = {response: [], responseCode}
                 //the actual response should be in the form of an array of JSONObjects
                 try{
-                    JSONObject obj = new JSONObject(result);
-                    JSONArray array = new JSONArray(obj.getString("response"));
-                    List<JSONObject> list = new ArrayList<>();
-                    for(int i = 0; i < array.length(); i++){
-                        list.add(array.getJSONObject(i));
+                    if(result != null && result.length() >= 1) {
+                        JSONObject obj = new JSONObject(result);
+                        JSONArray array = new JSONArray(obj.getString("response"));
+                        List<JSONObject> list = new ArrayList<>();
+                        for (int i = 0; i < array.length(); i++) {
+                            list.add(array.getJSONObject(i));
+                        }
+                        //to avoid duplicate objects, for now we'll do a clean save and rewrite the items in the list
+                        //should add better functionality later
+                        items = list;
+                        loadedItems = list;
+                        if (scrollListener != null) {
+                            scrollListener.restart();
+                        }
+                        //cache.cleanSave(list);
+                        notifyDataSetChanged();
+                        if (listener != null) {
+                            listener.onLoad(list);
+                        }
                     }
-                    //to avoid duplicate objects, for now we'll do a clean save and rewrite the items in the list
-                    //should add better functionality later
-                    items = list;
-                    loadedItems = list;
-                    if(scrollListener != null){
-                        scrollListener.restart();
-                    }
-                    //cache.cleanSave(list);
-                    notifyDataSetChanged();
-                    listener.onLoad(list);
                 }catch(Exception e){
                     e.printStackTrace();
+                    if(listener != null){
+                        listener.onLoad(null);
+                    }
                 }
                 onAfterLoad();
             }
@@ -231,24 +354,31 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
     }
 
     public void loadMoreBottom(final OnLoadListener listener){
-        final String id = getObjectId(loadedItems.get(loadedItems.size() - 1));
+        final String id = (loadedItems == null || loadedItems.size() < 1) ? "-1" : getObjectId(loadedItems.get(loadedItems.size() - 1));
         //the task to load data from the server
         final HttpTask t = new HttpTask() {
             @Override
             protected void onPostExecute(String result) {
                 //result = {response: [], responseCode}
                 //the actual response should be in the form of an array of JSONObjects
-                try{
-                    JSONObject obj = new JSONObject(result);
-                    JSONArray array = new JSONArray(obj.getString("response"));
-                    List<JSONObject> list = new ArrayList<>();
-                    for(int i = 0; i < array.length(); i++){
-                        list.add(array.getJSONObject(i));
+                try {
+                    if(result != null && result.length() >= 1) {
+                        JSONObject obj = new JSONObject(result);
+                        JSONArray array = new JSONArray(obj.getString("response"));
+                        List<JSONObject> list = new ArrayList<>();
+                        for (int i = 0; i < array.length(); i++) {
+                            list.add(array.getJSONObject(i));
+                        }
+                        addLoadedToBottom(list);
+                        if (listener != null) {
+                            listener.onLoad(list);
+                        }
                     }
-                    addLoadedToBottom(list);
-                    listener.onLoad(list);
-                }catch(Exception e){
+                } catch (Exception e) {
                     e.printStackTrace();
+                    if(listener != null){
+                        listener.onLoad(null);
+                    }
                 }
                 onAfterLoad();
             }
@@ -368,7 +498,6 @@ public class EndlessScrollAdapter extends RecyclerView.Adapter<EndlessScrollAdap
         @Override
         public void onScrolled(RecyclerView view, int dx, int dy){
             super.onScrolled(view, dx, dy);
-
             visibleItemCount = view.getChildCount();
             totalItemCount = mLinearLayoutManager.getItemCount();
             firstVisibleItem = mLinearLayoutManager.findFirstVisibleItemPosition();
